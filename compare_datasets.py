@@ -128,7 +128,7 @@ def main():
     # ── Chargement du modèle ──────────────────────────────────────
     model = load_model(args.checkpoint, device)
 
-    # ── Évaluation EMNIST ─────────────────────────────────────────
+    # ── Évaluation CCC ────────────────────────────────────────────
     print("[1/3] Évaluation sur CCC…")
     _, _, test_loader = load_ccc(args.data_dir, batch_size=args.batch_size, num_workers=2)
     ccc_metrics = full_evaluation(model, test_loader, device,

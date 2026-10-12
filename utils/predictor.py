@@ -69,7 +69,7 @@ class LetterPredictor:
         else:
             raise TypeError(f"Type non supporté : {type(image_input)}")
 
-        # Prétraitement : inversion si fond sombre (EMNIST a fond noir, trait blanc)
+        # Le modèle attend des traits clairs sur fond sombre.
         img = _auto_invert(img)
 
         tensor = self.transform(img).unsqueeze(0).to(self.device)  # (1,1,28,28)
@@ -126,8 +126,8 @@ class LetterPredictor:
 
 def _auto_invert(img: Image.Image) -> Image.Image:
     """
-    EMNIST : fond noir (0), trait blanc (255).
-    Si l'image soumise a un fond clair, on l'inverse.
+    Le chargeur du CCC convertit les caractères en traits clairs sur fond
+    sombre. On inverse une image externe à fond clair pour l'aligner dessus.
     """
     arr = np.array(img)
     if arr.mean() > 127:          # fond clair → on inverse

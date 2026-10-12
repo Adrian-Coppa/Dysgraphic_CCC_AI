@@ -1,5 +1,5 @@
 """
-CNN pour la reconnaissance de lettres manuscrites EMNIST.
+CNN pour la reconnaissance de lettres manuscrites cursives.
 Architecture : ConvNet à 3 blocs convolutifs + classificateur FC.
 """
 
@@ -8,9 +8,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class EMNISTNet(nn.Module):
+class LetterCNN(nn.Module):
     """
-    Réseau convolutif conçu pour les lettres EMNIST (28x28 pixels, 26 classes A-Z).
+    Réseau convolutif pour les lettres cursives (28x28 pixels, 26 classes A-Z).
     
     Architecture :
         Bloc 1 : Conv(1→32) → BN → ReLU → Conv(32→32) → BN → ReLU → MaxPool → Dropout
@@ -73,5 +73,5 @@ class EMNISTNet(nn.Module):
         return F.softmax(self(x), dim=1)
 
 
-def build_model(num_classes: int = 26, dropout: float = 0.4) -> EMNISTNet:
-    return EMNISTNet(num_classes=num_classes, dropout=dropout)
+def build_model(num_classes: int = 26, dropout: float = 0.4) -> LetterCNN:
+    return LetterCNN(num_classes=num_classes, dropout=dropout)

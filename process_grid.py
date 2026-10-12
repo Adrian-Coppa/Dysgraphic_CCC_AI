@@ -8,7 +8,7 @@ Traite toutes les photos de /custom_data/[lettre]/*.jpg :
   2. Redresse la perspective (corrige l'angle d'impression / de prise de photo).
   3. Découpe en 12 lignes x 9 colonnes.
   4. Sauvegarde chaque case dans sa résolution de découpe, sans normalisation
-      spécifique à EMNIST.
+      spécifique à un dataset.
   5. Sauvegarde les cases dans /custom_data_processed/[lettre]/<image>_r{row}_c{col}.png
 
 Les coins cliqués sont mis en cache dans un fichier JSON à côté de chaque

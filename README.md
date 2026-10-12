@@ -1,161 +1,145 @@
-# Reconnaissance d'écriture manuscrite — EMNIST Letters
+# Reconnaissance de lettres manuscrites — CCC
 
-Projet en deux phases :
-- **Phase 1** : entraîner un CNN sur EMNIST Letters (26 classes A-Z)
-- **Phase 2** : comparer les performances sur une écriture dysgraphique personnelle
+Ce projet entraîne un réseau convolutif sur le **Cursive Character Challenge (CCC)**, puis permet d'évaluer le modèle sur des écritures personnelles, notamment dysgraphiques.
 
----
+## Structure
 
-## Structure du projet
-
-```
-emnist_project/
-├── train.py                  # ← Script principal d'entraînement
-├── compare_datasets.py       # ← Phase 2 : comparaison des datasets
-├── requirements.txt
-├── models/
-│   └── cnn_model.py          # Architecture CNN
-├── utils/
-│   ├── data_loader.py        # Chargement EMNIST + dataset personnalisé
-│   ├── trainer.py            # Boucle d'entraînement + early stopping
-│   ├── evaluator.py          # Métriques, matrice de confusion, graphiques
-│   └── predictor.py          # Inférence sur une image unique
-├── data/                     # Téléchargé automatiquement par torchvision
-├── models/                   # Checkpoints sauvegardés ici
-└── results/                  # Graphiques et rapports
+```text
+train.py                  Entraînement et évaluation sur le CCC ou un dataset personnel
+compare_datasets.py       Comparaison du CCC avec une écriture personnelle
+process_grid.py           Découpage de photos de grilles d'écriture
+check_custom_data.py      Vérification des images d'un dataset personnel
+ccc/                      Fichiers CCC (*.chr)
+models/cnn_model.py       Architecture du réseau convolutif
+utils/data_loader.py      Chargement et prétraitement des données
+utils/trainer.py          Entraînement, early stopping et checkpoints
+utils/evaluator.py        Métriques et graphiques d'évaluation
+utils/predictor.py        Prédiction d'une lettre sur une image
+custom_data/              Images personnelles, rangées par lettre
+custom_data_processed/    Données personnelles transformées
+results/                  Rapports et graphiques générés
 ```
 
----
+## Préparer l'environnement
 
-## Installation
+Avec PowerShell sous Windows :
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Si PowerShell bloque l'activation, autorisez-la pour la fenêtre actuelle puis relancez la commande d'activation :
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+Les données CCC doivent être accessibles dans `ccc/` et contenir les fichiers `.chr` d'entraînement et de test. Un autre dossier peut être indiqué avec `--data-dir`.
+
+## Entraîner et évaluer sur le CCC
 
 ```bash
-pip install -r requirements.txt
-```
-
----
-
-## Phase 1 — Choisir le dataset et entraîner
-
-```bash
-# Choix interactif : CCC ou dataset personnalisé
-python train.py
-
-# Choix explicite
+# Entraînement avec les paramètres par défaut
 python train.py --dataset ccc
-python train.py --dataset custom --custom-dir ./custom_data_processed/adrian
 
 # Paramètres personnalisés
 python train.py --dataset ccc --epochs 50 --lr 3e-3 --batch-size 256
 
-# Test rapide (5 epochs)
-python train.py --fast
+# Entraînement court (5 epochs)
+python train.py --dataset ccc --fast
 
-# Évaluation seule (si best_model.pt existe déjà)
+# Indiquer un autre dossier CCC
+python train.py --dataset ccc --data-dir ./ccc
+
+# Évaluer le checkpoint existant sur le jeu de test CCC
 python train.py --dataset ccc --eval-only
+```
 
-# Entraîner puis évaluer le modèle sur CCC et le dataset personnalisé
+Sans `--dataset`, le script propose un choix interactif entre le CCC et un dataset personnel. L'option `--compare` demande également une comparaison croisée avec les données personnelles.
+
+Le meilleur modèle est écrit dans `models/best_model.pt`. Les fichiers d'évaluation et l'historique d'entraînement sont enregistrés dans `results/` et `models/history.json`.
+
+## Utiliser un dataset personnel
+
+Les fichiers `.chr` personnels peuvent être rangés dans des sous-dossiers nommés par lettre, par exemple :
+
+```text
+custom_data_processed/
+└── adrian/
+    ├── A/
+    │   ├── training.chr
+    │   └── test.chr
+    └── B/
+        ├── training.chr
+        └── test.chr
+```
+
+L'étiquette du dossier donne la lettre de chaque échantillon. L'entraînement accepte aussi des images rangées dans des sous-dossiers par lettre.
+
+```bash
+# Entraîner sur les fichiers .chr personnels
+python train.py --dataset custom --custom-dir ./custom_data_processed/adrian
+
+# Entraîner sur des images, rangées dans des dossiers A/, B/, etc.
+python train.py --dataset custom --custom-dir ./custom_data
+
+# Entraîner sur les données personnelles puis comparer avec le CCC
 python train.py --dataset custom --custom-dir ./custom_data_processed/adrian --compare
 ```
 
-Le dataset personnalisé doit contenir un dossier par lettre, avec `training.chr`
-et `test.chr` dans chaque dossier. La racine peut être `custom_data_processed`
-ou directement un dossier de personne comme `custom_data_processed/adrian`.
-Le modèle CCC reste dans `models/best_model.pt` pour préserver la compatibilité ;
-les modèles personnalisés sont sauvegardés dans `models/custom/best_model.pt`.
+Les checkpoints personnalisés sont sauvegardés dans `models/custom/best_model.pt`.
 
-**Fichiers produits :**
-- `models/best_model.pt` — meilleur checkpoint
-- `results/training_history.png` — courbes loss/accuracy
-- `results/EMNIST_confusion_matrix.png` — matrice de confusion (26×26)
-- `results/EMNIST_per_class.png` — accuracy par lettre
-- `results/EMNIST_report.txt` — précision / rappel / F1 par classe
+## Comparer le CCC et une écriture personnelle
 
----
-
-## Phase 2 — Comparaison avec écriture dysgraphique
-
-### Préparer les données
-
-Créer un dossier `custom_data/` avec une sous-arborescence par lettre :
-
-```
-custom_data/
-    A/
-        a_photo_1.png
-        a_photo_2.png
-    B/
-        b_photo_1.png
-    …
-```
-
-> **Astuce pour scanner votre écriture :**
-> - Écrire chaque lettre sur du papier blanc
-> - Scanner ou photographier avec fond blanc
-> - Recadrer chaque lettre en une image (environ 100×100 px suffit)
-> - Nommage libre, l'extension `.png` ou `.jpg` est acceptée
-
-### Lancer la comparaison
+La comparaison évalue le checkpoint sur le jeu de test CCC et sur des données personnelles, puis produit un graphique comparatif.
 
 ```bash
-# Comparaison simple
+# Les images sont rangées dans ./custom_data/A/, ./custom_data/B/, etc.
 python compare_datasets.py --custom-dir ./custom_data
 
-# Comparaison avec les fichiers .chr personnalisés
-python compare_datasets.py --checkpoint ./models/custom/best_model.pt \
-    --custom-dir ./custom_data_processed/adrian --custom-format chr
+# Charger un dossier de fichiers .chr personnels
+python compare_datasets.py --custom-dir ./custom_data_processed/adrian --custom-format chr
 
-# Avec fine-tuning sur les données dysgraphiques
+# Affiner le modèle sur les données personnelles avant de les réévaluer
 python compare_datasets.py --custom-dir ./custom_data --retrain --retrain-epochs 15
 ```
 
----
+Le dossier CCC est `./ccc` par défaut. Pour en utiliser un autre, passer `--data-dir`.
 
-## Prédire une seule lettre
+## Prédire une lettre
 
 ```bash
 python utils/predictor.py ma_lettre.png --checkpoint models/best_model.pt
 ```
 
-Ou en Python :
+Ou depuis Python :
 
 ```python
 from utils.predictor import LetterPredictor
 
 predictor = LetterPredictor("models/best_model.pt")
 lettre, confiance, top5 = predictor.predict_image("ma_lettre.png")
-print(f"Lettre : {lettre}  ({confiance:.1%})")
+print(f"Lettre : {lettre} ({confiance:.1%})")
 ```
 
----
+Les images personnelles peuvent être placées sur un fond clair : le prétraitement inverse automatiquement les images à fond clair avant la prédiction.
 
-## Architecture du CNN
+## Architecture du réseau
 
+```text
+Entrée (1 × 28 × 28)
+  → Bloc 1 : Conv(32) → BN → ReLU → Conv(32) → BN → ReLU → MaxPool → Dropout
+  → Bloc 2 : Conv(64) → BN → ReLU → Conv(64) → BN → ReLU → MaxPool → Dropout
+  → Bloc 3 : Conv(128) → BN → ReLU → AdaptiveAvgPool(4 × 4)
+  → Classificateur : Flatten → Linear(256) → ReLU → Dropout → Linear(26)
 ```
-Input (1×28×28)
-  → Block 1 : Conv(32) → BN → ReLU → Conv(32) → BN → ReLU → MaxPool → Dropout
-  → Block 2 : Conv(64) → BN → ReLU → Conv(64) → BN → ReLU → MaxPool → Dropout
-  → Block 3 : Conv(128) → BN → ReLU → AdaptiveAvgPool(4×4)
-  → FC : Flatten → Linear(256) → ReLU → Dropout → Linear(26)
-```
 
-Paramètres : ~600 000  
-Performances attendues sur EMNIST Letters : **~91-93% accuracy**
+Les données CCC sont composées de caractères cursifs étiquetés. Le chargeur convertit les étiquettes en majuscules et conserve les 26 classes A–Z.
 
----
+## Piste d'amélioration
 
-## Notes sur EMNIST Letters
-
-- Dataset : 88 800 images train / 14 800 test
-- 26 classes (A-Z, insensible à la casse)
-- Images 28×28 niveaux de gris, fond noir, trait blanc
-- Téléchargement automatique via `torchvision` (~550 Mo)
-
----
-
-## Piste d'extension : Transfer Learning
-
-Pour améliorer la reconnaissance dysgraphique, deux stratégies :
-
-1. **Fine-tuning** (`--retrain`) : ajuster les poids sur vos données après entraînement EMNIST.
-2. **Data augmentation renforcée** : ajouter bruit, déformation élastique pour simuler la dysgraphie lors de l'entraînement initial.
+L'option `--retrain` permet d'affiner le modèle entraîné sur le CCC à l'aide de données personnelles. Une augmentation de données plus poussée peut également aider à simuler les variations d'écriture.

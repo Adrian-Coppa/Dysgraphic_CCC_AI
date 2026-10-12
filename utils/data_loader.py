@@ -313,11 +313,6 @@ def load_custom_chr(
     return train_loader, val_loader, test_loader
 
 
-def load_emnist(*args, **kwargs):
-    """Compatibilité avec l’ancien nom de fonction."""
-    return load_ccc(*args, **kwargs)
-
-
 class CustomHandwritingDataset(Dataset):
     """Dataset pour images manuscrites personnelles."""
 

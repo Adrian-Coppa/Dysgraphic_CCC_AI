@@ -1,0 +1,16 @@
+﻿.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+data/
+ccc/
+custom_data/
+custom_data_processed/
+results/
+*.pt
+*.pth
+*.ckpt
+*.vec
+*.chr
